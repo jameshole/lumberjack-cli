@@ -76,6 +76,9 @@ export async function main(argv) {
   } else {
     await runCommandLine(options);
   }
+
+  // Ensure stdin is paused so process can exit
+  process.stdin.pause();
 }
 
 /**

@@ -63,28 +63,25 @@ export async function select(question, options) {
   return new Promise((resolve) => {
     let selectedIndex = 0;
 
-    const render = () => {
-      // Clear previous output
-      process.stdout.write(ANSI.cursorHide);
-
-      console.log(`\n${ANSI.cyan}?${ANSI.reset} ${question}`);
+    const renderOptions = () => {
       for (let i = 0; i < options.length; i++) {
-        const prefix = i === selectedIndex
+        const marker = i === selectedIndex
           ? `${ANSI.cyan}  ○ ${ANSI.reset}`
           : `${ANSI.dim}  ○ ${ANSI.reset}`;
-        console.log(`${prefix}${options[i].label}`);
+        process.stdout.write(`${marker}${options[i].label}\n`);
       }
     };
 
-    const cleanup = () => {
-      // Move cursor up and clear all option lines
-      for (let i = 0; i <= options.length; i++) {
+    const clearOptions = () => {
+      for (let i = 0; i < options.length; i++) {
         process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
       }
-      process.stdout.write(ANSI.cursorShow);
     };
 
-    render();
+    // Initial render - question + options
+    process.stdout.write(ANSI.cursorHide);
+    console.log(`\n${ANSI.cyan}?${ANSI.reset} ${question}`);
+    renderOptions();
 
     process.stdin.setRawMode(true);
     process.stdin.resume();
@@ -93,7 +90,7 @@ export async function select(question, options) {
     const onKeypress = (key) => {
       // Ctrl+C
       if (key === '\u0003') {
-        cleanup();
+        process.stdout.write(ANSI.cursorShow);
         process.stdin.setRawMode(false);
         process.stdin.removeListener('data', onKeypress);
         process.exit(0);
@@ -101,9 +98,12 @@ export async function select(question, options) {
 
       // Enter
       if (key === '\r' || key === '\n') {
-        cleanup();
+        clearOptions();
+        process.stdout.write(ANSI.cursorShow);
         process.stdin.setRawMode(false);
         process.stdin.removeListener('data', onKeypress);
+        // Clear the question line too and reprint with selection
+        process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
         console.log(`${ANSI.cyan}?${ANSI.reset} ${question} ${ANSI.cyan}${options[selectedIndex].label}${ANSI.reset}`);
         resolve(options[selectedIndex].value);
         return;
@@ -118,9 +118,9 @@ export async function select(question, options) {
         selectedIndex = (selectedIndex + 1) % options.length;
       }
 
-      // Re-render
-      cleanup();
-      render();
+      // Re-render options only
+      clearOptions();
+      renderOptions();
     };
 
     process.stdin.on('data', onKeypress);
@@ -142,10 +142,7 @@ export async function multiSelect(question, options) {
         .filter(i => i >= 0)
     );
 
-    const render = () => {
-      process.stdout.write(ANSI.cursorHide);
-
-      console.log(`\n${ANSI.cyan}?${ANSI.reset} ${question} ${ANSI.dim}(space to toggle, enter to confirm)${ANSI.reset}`);
+    const renderOptions = () => {
       for (let i = 0; i < options.length; i++) {
         const isSelected = selected.has(i);
         const isFocused = i === selectedIndex;
@@ -156,18 +153,21 @@ export async function multiSelect(question, options) {
           ? `${ANSI.cyan}${options[i].label}${ANSI.reset}`
           : options[i].label;
         const pointer = isFocused ? `${ANSI.cyan}>${ANSI.reset}` : ' ';
-        console.log(` ${pointer} ${checkbox} ${label}`);
+        process.stdout.write(` ${pointer} ${checkbox} ${label}\n`);
       }
     };
 
-    const cleanup = () => {
-      for (let i = 0; i <= options.length; i++) {
+    const clearOptions = () => {
+      // Move up and clear each option line
+      for (let i = 0; i < options.length; i++) {
         process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
       }
-      process.stdout.write(ANSI.cursorShow);
     };
 
-    render();
+    // Initial render - question + options
+    process.stdout.write(ANSI.cursorHide);
+    console.log(`\n${ANSI.cyan}?${ANSI.reset} ${question} ${ANSI.dim}(space to toggle, enter to confirm)${ANSI.reset}`);
+    renderOptions();
 
     process.stdin.setRawMode(true);
     process.stdin.resume();
@@ -176,7 +176,7 @@ export async function multiSelect(question, options) {
     const onKeypress = (key) => {
       // Ctrl+C
       if (key === '\u0003') {
-        cleanup();
+        process.stdout.write(ANSI.cursorShow);
         process.stdin.setRawMode(false);
         process.stdin.removeListener('data', onKeypress);
         process.exit(0);
@@ -184,11 +184,14 @@ export async function multiSelect(question, options) {
 
       // Enter - confirm selection
       if (key === '\r' || key === '\n') {
-        cleanup();
+        clearOptions();
+        process.stdout.write(ANSI.cursorShow);
         process.stdin.setRawMode(false);
         process.stdin.removeListener('data', onKeypress);
         const selectedValues = [...selected].map(i => options[i].value);
         const selectedLabels = [...selected].map(i => options[i].label).join(', ');
+        // Clear the question line too and reprint with selection
+        process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
         console.log(`${ANSI.cyan}?${ANSI.reset} ${question} ${ANSI.cyan}${selectedLabels || '(none)'}${ANSI.reset}`);
         resolve(selectedValues);
         return;
@@ -221,8 +224,8 @@ export async function multiSelect(question, options) {
         }
       }
 
-      cleanup();
-      render();
+      clearOptions();
+      renderOptions();
     };
 
     process.stdin.on('data', onKeypress);
@@ -261,11 +264,12 @@ export async function runInteractiveMode(options) {
   options.stale = conditions.includes('stale') ? true : null;
 
   // Apply config defaults for merged/squashed/stale
-  if (options.merged === true) {
-    options.merged = options._config?.mergeBase || null;
+  // Keep as true if no mergeBase configured (will use current branch)
+  if (options.merged === true && options._config?.mergeBase) {
+    options.merged = options._config.mergeBase;
   }
-  if (options.squashed === true) {
-    options.squashed = options._config?.mergeBase || null;
+  if (options.squashed === true && options._config?.mergeBase) {
+    options.squashed = options._config.mergeBase;
   }
   if (options.stale === true) {
     options.stale = options._config?.stale || 30;

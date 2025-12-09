@@ -122,14 +122,14 @@ export function mergeOptions(cliOptions, config) {
     merged.stale = config.stale || DEFAULT_CONFIG.stale;
   }
 
-  // Handle merged base - if merged is true (flag without value), use config
+  // Handle merged base - if merged is true (flag without value), use config or keep true (will use current branch)
   if (merged.merged === true) {
-    merged.merged = config.mergeBase || null;
+    merged.merged = config.mergeBase || true;
   }
 
-  // Handle squashed base - if squashed is true (flag without value), use config
+  // Handle squashed base - if squashed is true (flag without value), use config or keep true (will use current branch)
   if (merged.squashed === true) {
-    merged.squashed = config.mergeBase || null;
+    merged.squashed = config.mergeBase || true;
   }
 
   // Handle fetch - CLI --no-fetch overrides config
