@@ -1,0 +1,28 @@
+{
+  "name": "lumberjack",
+  "version": "1.0.0",
+  "description": "A minimal CLI tool for cleaning up stale git branches and worktrees",
+  "type": "module",
+  "bin": {
+    "chop": "./bin/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "keywords": [
+    "git",
+    "branches",
+    "worktrees",
+    "cleanup",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/lumberjack"
+  }
+}
