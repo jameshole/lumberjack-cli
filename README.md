@@ -3,7 +3,7 @@
 A minimal CLI tool for cleaning up stale git branches and worktrees.
 
 ```bash
-npm install -g lumberjack
+npm install -g lumberjack-cli
 ```
 
 ```bash
