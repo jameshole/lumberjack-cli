@@ -494,4 +494,4 @@ MIT
 
 ## Contributing
 
-Issues and PRs welcome at [github.com/yourusername/lumberjack](https://github.com/yourusername/lumberjack).
+Issues and PRs welcome at [github.com/jameshole/lumberjack](https://github.com/jameshole/lumberjack).

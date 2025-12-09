@@ -1,6 +1,11 @@
 {
-  "name": "lumberjack",
-  "version": "1.0.0",
+  "name": "lumberjack-cli",
+  "author": "James Hole <jamesc.hole@gmail.com>",
+  "homepage": "https://github.com/jameshole/lumberjack-cli",
+  "bugs": {
+    "url": "https://github.com/jameshole/lumberjack-cli/issues"
+  },
+  "version": "0.0.1",
   "description": "A minimal CLI tool for cleaning up stale git branches and worktrees",
   "type": "module",
   "bin": {
@@ -23,6 +28,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/lumberjack"
+    "url": "https://github.com/jameshole/lumberjack-cli"
   }
 }
