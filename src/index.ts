@@ -22,13 +22,7 @@ import {
   outputJson,
   buildJsonOutput,
 } from './output.js';
-import {
-  runInteractiveMode,
-  selectItemsToDelete,
-  formatBranchLabel,
-  formatWorktreeLabel,
-  confirm,
-} from './prompts.js';
+import { confirm } from './prompts.js';
 import type { MergedOptions, BranchResult, WorktreeResult, DeletionSummary } from './types.js';
 
 /**
@@ -65,102 +59,18 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   // Merge CLI options with config
-  let mergedOptions = mergeOptions(options, config);
+  const mergedOptions = mergeOptions(options, config);
 
-  // Determine mode: interactive or command-line
-  const isInteractive = !hasDetectionFlags(mergedOptions);
-
-  if (isInteractive) {
-    await runInteractive(mergedOptions);
-  } else {
-    await runCommandLine(mergedOptions);
+  // If no detection flags, show help
+  if (!hasDetectionFlags(mergedOptions)) {
+    printHelp();
+    return;
   }
+
+  await runCommandLine(mergedOptions);
 
   // Ensure stdin is paused so process can exit
   process.stdin.pause();
-}
-
-/**
- * Run in interactive mode
- */
-async function runInteractive(options: MergedOptions): Promise<void> {
-  // Get user preferences
-  options = await runInteractiveMode(options);
-
-  // Check if any detection was selected
-  if (!hasDetectionFlags(options)) {
-    printInfo('No conditions selected. Exiting.');
-    return;
-  }
-
-  // Fetch if needed
-  if (!options.noFetch) {
-    printInfo('Fetching and pruning...');
-    fetchPrune();
-  }
-
-  // Run detection
-  printInfo('Scanning...');
-  const results = detectAll(options);
-
-  // Check if anything was found
-  if (results.branches.length === 0 && results.worktrees.length === 0) {
-    printNothingFound();
-    return;
-  }
-
-  // Show and select branches
-  let selectedBranches: BranchResult[] = [];
-  if (results.branches.length > 0) {
-    console.log();
-    printBranchesHeader(results.branches.length);
-    for (const branch of results.branches) {
-      printBranch(branch, options);
-    }
-
-    selectedBranches = await selectItemsToDelete(
-      results.branches,
-      'branches',
-      formatBranchLabel
-    );
-  }
-
-  // Show and select worktrees
-  let selectedWorktrees: WorktreeResult[] = [];
-  if (results.worktrees.length > 0) {
-    console.log();
-    printWorktreesHeader(results.worktrees.length);
-    for (const worktree of results.worktrees) {
-      printWorktree(worktree, options);
-    }
-
-    selectedWorktrees = await selectItemsToDelete(
-      results.worktrees,
-      'worktrees',
-      formatWorktreeLabel
-    );
-  }
-
-  // Confirm and delete
-  if (selectedBranches.length === 0 && selectedWorktrees.length === 0) {
-    printInfo('Nothing selected. Exiting.');
-    return;
-  }
-
-  const totalSelected = selectedBranches.length + selectedWorktrees.length;
-  const confirmed = await confirm(
-    `Confirm deletion of ${totalSelected} item${totalSelected !== 1 ? 's' : ''}?`,
-    false
-  );
-
-  if (!confirmed) {
-    printInfo('Cancelled.');
-    return;
-  }
-
-  // Perform deletions
-  const summary = await performDeletions(selectedBranches, selectedWorktrees);
-  printSummary(summary);
 }
 
 /**

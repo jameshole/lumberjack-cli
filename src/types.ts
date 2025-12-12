@@ -95,12 +95,6 @@ export interface Summary extends DeletionSummary {
   protected?: number;
 }
 
-export interface SelectOption<T> {
-  label: string;
-  value: T;
-  checked?: boolean;
-}
-
 export interface GitOptions {
   cwd?: string;
   allowFailure?: boolean;

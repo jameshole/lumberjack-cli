@@ -17,11 +17,8 @@ If you use git worktrees or work on a team with squash-merge workflows, you've p
 ## Quick Start
 
 ```bash
-# Interactive mode - walks you through cleanup options
-chop
-
 # Preview what would be deleted (always safe)
-chop --dry-run
+chop --gone --dry-run
 
 # Clean up branches where the remote has been deleted
 chop --branch --gone
@@ -41,9 +38,7 @@ chop --gone
 chop [options]
 ```
 
-When run with no arguments (and no `defaultCommand` configured), Lumberjack enters interactive mode.
-
-When run with detection flags but without `--branch` or `--tree`, both branches and worktrees are processed.
+At least one detection flag is required. When run without `--branch` or `--tree`, both branches and worktrees are processed.
 
 ---
 
@@ -76,8 +71,6 @@ Specify the conditions for cleanup. Multiple flags use OR logic - items matching
 | `--squashed[=<branch>]` | Changes are present in the target branch (tree comparison). Works for squash-merge even when remote still exists. | ✅ | ✅ |
 | `--stale[=<days>]` | No commits in the specified number of days. Default: 30 (or config value). | ✅ | ✅ |
 | `--all` | Shorthand for `--gone --merged --squashed --stale`. | ✅ | ✅ |
-
-At least one detection flag is required for non-interactive mode.
 
 ### Examples
 
@@ -161,7 +154,7 @@ Lumberjack can be configured via a `.lumberjackrc` file in your home directory o
 | `stale` | `number` | `30` | Default number of days for `--stale` flag. |
 | `fetch` | `boolean` | `true` | Run `git fetch --prune` before detection. Set to `false` to always skip. |
 | `mergeBase` | `string` | `null` | Default branch for `--merged` check. If not set, uses current branch. |
-| `defaultCommand` | `string` | `null` | If set, `chop` without arguments runs this instead of interactive mode. |
+| `defaultCommand` | `string` | `null` | If set, `chop` without arguments runs this command. |
 
 ### Config Precedence
 
@@ -170,82 +163,6 @@ Lumberjack can be configured via a `.lumberjackrc` file in your home directory o
 3. Home directory `~/.lumberjackrc`
 4. `package.json` lumberjack key
 5. Defaults (lowest)
-
----
-
-## Interactive Mode
-
-When run without arguments (and no `defaultCommand` configured), Lumberjack enters interactive mode.
-
-```
-$ chop
-
-? What would you like to clean up?
-  ○ Branches
-  ○ Worktrees
-  ○ Both
-
-? What conditions? (select all that apply)
-  ◉ Remote gone (squash-merge cleanup)
-  ◯ Merged into current branch
-  ◯ Stale (no commits in 30+ days)
-```
-
-### Branch Selection
-
-```
-Scanning branches...
-
-Found 5 branches to review:
-
-  feat/auth-flow
-  └─ remote gone (deleted 12 days ago)
-
-  feat/user-settings
-  └─ remote gone (deleted 3 days ago)
-
-  fix/modal-bug
-  └─ merged into main
-
-  experiment/new-nav
-  └─ stale (last commit 45 days ago)
-
-  wip/testing
-  └─ stale (last commit 90 days ago)
-
-? Select branches to delete:
-  ◉ feat/auth-flow
-  ◉ feat/user-settings
-  ◉ fix/modal-bug
-  ◯ experiment/new-nav
-  ◯ wip/testing
-
-? Confirm deletion of 3 branches? (y/N)
-```
-
-### Worktree Selection
-
-```
-Scanning worktrees...
-
-Found 3 worktrees to review:
-
-  ~/code/myproject-feat-auth
-  └─ branch: feat/auth (remote gone)
-
-  ~/code/myproject-old-feature
-  └─ branch: old-feature (squashed into main)
-
-  ~/code/myproject-experiment
-  └─ branch: experiment (stale - 60 days)
-
-? Select worktrees to remove:
-  ◉ ~/code/myproject-feat-auth
-  ◉ ~/code/myproject-old-feature
-  ◯ ~/code/myproject-experiment
-
-? Confirm removal of 2 worktrees? (y/N)
-```
 
 ---
 
@@ -381,7 +298,7 @@ chop --tree --gone --stale
 ### CI/Automation
 
 ```bash
-# Non-interactive, JSON output for logging
+# JSON output for logging
 chop --branch --gone --force --json >> cleanup.log
 ```
 
@@ -396,7 +313,7 @@ If you always run the same cleanup, set it as default:
 }
 ```
 
-Now bare `chop` runs `chop --branch --gone` instead of interactive mode.
+Now `chop` with no arguments runs `chop --branch --gone`.
 
 ---
 
@@ -469,13 +386,13 @@ chop --branch --stale
 
 ## Comparison with Alternatives
 
-| Tool | Branches | Worktrees | Interactive | Squash Detection |
-|------|----------|-----------|-------------|------------------|
-| Lumberjack | ✅ | ✅ | ✅ | ✅ |
-| `git branch -d` | ✅ | ❌ | ❌ | ❌ |
-| `git worktree prune` | ❌ | ✅ (partial) | ❌ | ❌ |
-| git-sweep | ✅ | ❌ | ❌ | ❌ |
-| git-trim | ✅ | ❌ | ❌ | ❌ |
+| Tool | Branches | Worktrees | Squash Detection |
+|------|----------|-----------|------------------|
+| Lumberjack | ✅ | ✅ | ✅ |
+| `git branch -d` | ✅ | ❌ | ❌ |
+| `git worktree prune` | ❌ | ✅ (partial) | ❌ |
+| git-sweep | ✅ | ❌ | ❌ |
+| git-trim | ✅ | ❌ | ❌ |
 
 ---
 
