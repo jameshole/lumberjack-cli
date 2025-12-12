@@ -3,15 +3,13 @@
  * Executes git commands and parses output
  */
 
-import { execSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
+import type { BranchInfo, WorktreeInfo, DeletionResult, GitOptions } from './types.js';
 
 /**
  * Execute a git command and return stdout
- * @param {string[]} args - Git command arguments
- * @param {object} options - Options
- * @returns {string} Command output
  */
-export function git(args, options = {}) {
+export function git(args: string[], options: GitOptions = {}): string {
   const result = spawnSync('git', args, {
     cwd: options.cwd || process.cwd(),
     encoding: 'utf-8',
@@ -31,9 +29,8 @@ export function git(args, options = {}) {
 
 /**
  * Check if we're in a git repository
- * @returns {boolean}
  */
-export function isGitRepo() {
+export function isGitRepo(): boolean {
   try {
     git(['rev-parse', '--git-dir'], { allowFailure: false });
     return true;
@@ -44,9 +41,8 @@ export function isGitRepo() {
 
 /**
  * Get the current branch name
- * @returns {string|null}
  */
-export function getCurrentBranch() {
+export function getCurrentBranch(): string | null {
   try {
     return git(['branch', '--show-current']).trim() || null;
   } catch {
@@ -57,17 +53,16 @@ export function getCurrentBranch() {
 /**
  * Fetch and prune remote tracking branches
  */
-export function fetchPrune() {
+export function fetchPrune(): void {
   git(['fetch', '--prune'], { allowFailure: true });
 }
 
 /**
  * Get all local branches with tracking info
- * @returns {Array<{name: string, tracking: string|null, gone: boolean}>}
  */
-export function getBranchesWithTracking() {
+export function getBranchesWithTracking(): BranchInfo[] {
   const output = git(['branch', '-vv']);
-  const branches = [];
+  const branches: BranchInfo[] = [];
 
   for (const line of output.split('\n')) {
     if (!line.trim()) continue;
@@ -85,7 +80,7 @@ export function getBranchesWithTracking() {
 
     // Look for tracking info in brackets
     const trackingMatch = trimmed.match(/\[([^\]]+)\]/);
-    let tracking = null;
+    let tracking: string | null = null;
     let gone = false;
 
     if (trackingMatch) {
@@ -109,10 +104,8 @@ export function getBranchesWithTracking() {
 
 /**
  * Get branches merged into a base branch
- * @param {string} baseBranch - Branch to check against
- * @returns {string[]} List of merged branch names
  */
-export function getMergedBranches(baseBranch) {
+export function getMergedBranches(baseBranch: string): string[] {
   const output = git(['branch', '--merged', baseBranch], { allowFailure: true });
   return output
     .split('\n')
@@ -122,11 +115,8 @@ export function getMergedBranches(baseBranch) {
 
 /**
  * Check if a branch's changes are in the base branch (for squash detection)
- * @param {string} branch - Branch to check
- * @param {string} baseBranch - Base branch
- * @returns {boolean} True if branch's changes are in base
  */
-export function isBranchSquashed(branch, baseBranch) {
+export function isBranchSquashed(branch: string, baseBranch: string): boolean {
   // git diff base...branch shows changes in branch not in base
   // If there are no changes, the branch is effectively merged/squashed
   const result = spawnSync('git', ['diff', '--quiet', `${baseBranch}...${branch}`], {
@@ -138,10 +128,8 @@ export function isBranchSquashed(branch, baseBranch) {
 
 /**
  * Get the last commit date for a branch
- * @param {string} branch - Branch name
- * @returns {Date|null}
  */
-export function getLastCommitDate(branch) {
+export function getLastCommitDate(branch: string): Date | null {
   try {
     const output = git(['log', '-1', '--format=%ci', branch]);
     const dateStr = output.trim();
@@ -154,12 +142,11 @@ export function getLastCommitDate(branch) {
 
 /**
  * Get all worktrees
- * @returns {Array<{path: string, branch: string|null, bare: boolean}>}
  */
-export function getWorktrees() {
+export function getWorktrees(): WorktreeInfo[] {
   const output = git(['worktree', 'list', '--porcelain']);
-  const worktrees = [];
-  let current = {};
+  const worktrees: WorktreeInfo[] = [];
+  let current: WorktreeInfo = { path: '', branch: null, bare: false };
 
   for (const line of output.split('\n')) {
     if (line.startsWith('worktree ')) {
@@ -187,26 +174,20 @@ export function getWorktrees() {
 
 /**
  * Delete a local branch
- * @param {string} branch - Branch name
- * @param {boolean} force - Force delete even if unmerged
- * @returns {{success: boolean, error?: string}}
  */
-export function deleteBranch(branch, force = false) {
+export function deleteBranch(branch: string, force: boolean = false): DeletionResult {
   try {
     git(['branch', force ? '-D' : '-d', branch]);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
 /**
  * Remove a worktree
- * @param {string} path - Worktree path
- * @param {boolean} force - Force removal
- * @returns {{success: boolean, error?: string}}
  */
-export function removeWorktree(path, force = false) {
+export function removeWorktree(path: string, force: boolean = false): DeletionResult {
   try {
     const args = ['worktree', 'remove'];
     if (force) args.push('--force');
@@ -214,16 +195,14 @@ export function removeWorktree(path, force = false) {
     git(args);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
 /**
  * Check if a branch exists
- * @param {string} branch - Branch name
- * @returns {boolean}
  */
-export function branchExists(branch) {
+export function branchExists(branch: string): boolean {
   const result = spawnSync('git', ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]);
   return result.status === 0;
 }

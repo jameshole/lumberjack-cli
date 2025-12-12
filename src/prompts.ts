@@ -4,6 +4,7 @@
  */
 
 import * as readline from 'readline';
+import type { MergedOptions, SelectOption, BranchResult, WorktreeResult } from './types.js';
 
 // ANSI codes for terminal manipulation
 const ANSI = {
@@ -21,9 +22,8 @@ const ANSI = {
 
 /**
  * Create a readline interface
- * @returns {readline.Interface}
  */
-function createInterface() {
+function createInterface(): readline.Interface {
   return readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -32,11 +32,8 @@ function createInterface() {
 
 /**
  * Ask a yes/no confirmation question
- * @param {string} question - Question to ask
- * @param {boolean} defaultValue - Default value if user presses enter
- * @returns {Promise<boolean>}
  */
-export async function confirm(question, defaultValue = false) {
+export async function confirm(question: string, defaultValue: boolean = false): Promise<boolean> {
   const rl = createInterface();
   const hint = defaultValue ? '(Y/n)' : '(y/N)';
 
@@ -55,15 +52,12 @@ export async function confirm(question, defaultValue = false) {
 
 /**
  * Display a single-select menu
- * @param {string} question - Question to display
- * @param {Array<{label: string, value: any}>} options - Options to choose from
- * @returns {Promise<any>} Selected value
  */
-export async function select(question, options) {
+export async function select<T>(question: string, options: SelectOption<T>[]): Promise<T> {
   return new Promise((resolve) => {
     let selectedIndex = 0;
 
-    const renderOptions = () => {
+    const renderOptions = (): void => {
       for (let i = 0; i < options.length; i++) {
         const marker = i === selectedIndex
           ? `${ANSI.cyan}  ○ ${ANSI.reset}`
@@ -72,7 +66,7 @@ export async function select(question, options) {
       }
     };
 
-    const clearOptions = () => {
+    const clearOptions = (): void => {
       for (let i = 0; i < options.length; i++) {
         process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
       }
@@ -87,7 +81,7 @@ export async function select(question, options) {
     process.stdin.resume();
     process.stdin.setEncoding('utf8');
 
-    const onKeypress = (key) => {
+    const onKeypress = (key: string): void => {
       // Ctrl+C
       if (key === '\u0003') {
         process.stdout.write(ANSI.cursorShow);
@@ -129,11 +123,8 @@ export async function select(question, options) {
 
 /**
  * Display a multi-select checkbox menu
- * @param {string} question - Question to display
- * @param {Array<{label: string, value: any, checked?: boolean}>} options - Options to choose from
- * @returns {Promise<Array<any>>} Selected values
  */
-export async function multiSelect(question, options) {
+export async function multiSelect<T>(question: string, options: SelectOption<T>[]): Promise<T[]> {
   return new Promise((resolve) => {
     let selectedIndex = 0;
     const selected = new Set(
@@ -142,7 +133,7 @@ export async function multiSelect(question, options) {
         .filter(i => i >= 0)
     );
 
-    const renderOptions = () => {
+    const renderOptions = (): void => {
       for (let i = 0; i < options.length; i++) {
         const isSelected = selected.has(i);
         const isFocused = i === selectedIndex;
@@ -157,7 +148,7 @@ export async function multiSelect(question, options) {
       }
     };
 
-    const clearOptions = () => {
+    const clearOptions = (): void => {
       // Move up and clear each option line
       for (let i = 0; i < options.length; i++) {
         process.stdout.write(ANSI.cursorUp + ANSI.clearLine);
@@ -173,7 +164,7 @@ export async function multiSelect(question, options) {
     process.stdin.resume();
     process.stdin.setEncoding('utf8');
 
-    const onKeypress = (key) => {
+    const onKeypress = (key: string): void => {
       // Ctrl+C
       if (key === '\u0003') {
         process.stdout.write(ANSI.cursorShow);
@@ -234,10 +225,8 @@ export async function multiSelect(question, options) {
 
 /**
  * Run interactive mode for lumberjack
- * @param {object} options - Current options
- * @returns {Promise<object>} Updated options with user selections
  */
-export async function runInteractiveMode(options) {
+export async function runInteractiveMode(options: MergedOptions): Promise<MergedOptions> {
   console.log();
 
   // What to clean up?
@@ -280,12 +269,12 @@ export async function runInteractiveMode(options) {
 
 /**
  * Let user select which items to delete
- * @param {Array} items - Items to choose from
- * @param {string} type - 'branches' or 'worktrees'
- * @param {function} formatLabel - Function to format item label
- * @returns {Promise<Array>} Selected items
  */
-export async function selectItemsToDelete(items, type, formatLabel) {
+export async function selectItemsToDelete<T>(
+  items: T[],
+  type: string,
+  formatLabel: (item: T) => string
+): Promise<T[]> {
   if (items.length === 0) return [];
 
   const options = items.map(item => ({
@@ -300,10 +289,8 @@ export async function selectItemsToDelete(items, type, formatLabel) {
 
 /**
  * Format a branch for selection display
- * @param {object} branch - Branch object
- * @returns {string}
  */
-export function formatBranchLabel(branch) {
+export function formatBranchLabel(branch: BranchResult): string {
   const reasons = branch.reasons || [branch.reason];
   const reasonStr = reasons.join(', ');
   return `${branch.name} ${ANSI.dim}(${reasonStr})${ANSI.reset}`;
@@ -311,10 +298,8 @@ export function formatBranchLabel(branch) {
 
 /**
  * Format a worktree for selection display
- * @param {object} worktree - Worktree object
- * @returns {string}
  */
-export function formatWorktreeLabel(worktree) {
+export function formatWorktreeLabel(worktree: WorktreeResult): string {
   const reasons = worktree.reasons || [worktree.reason];
   const reasonStr = reasons.join(', ');
   return `${worktree.path} ${ANSI.dim}[${worktree.branch}] (${reasonStr})${ANSI.reset}`;

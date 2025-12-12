@@ -8,19 +8,31 @@ import { detectMergedBranches, detectMergedWorktrees } from './merged.js';
 import { detectSquashedBranches, detectSquashedWorktrees } from './squashed.js';
 import { detectStaleBranches, detectStaleWorktrees } from './stale.js';
 import { isProtected } from '../config.js';
+import type { MergedOptions, BranchResult, WorktreeResult, DetectionResult } from '../types.js';
+
+interface RawBranchResult {
+  name: string;
+  reason: string;
+  details: Record<string, unknown>;
+}
+
+interface RawWorktreeResult {
+  path: string;
+  branch: string;
+  reason: string;
+  details: Record<string, unknown>;
+}
 
 /**
  * Run all enabled detection strategies and combine results
- * @param {object} options - Detection options
- * @returns {{branches: Array, worktrees: Array, protected: Array}}
  */
-export function detectAll(options) {
+export function detectAll(options: MergedOptions): DetectionResult {
   const targetBranches = options.branch || (!options.branch && !options.tree);
   const targetWorktrees = options.tree || (!options.branch && !options.tree);
 
-  const branchResults = new Map();
-  const worktreeResults = new Map();
-  const protectedBranches = [];
+  const branchResults = new Map<string, BranchResult>();
+  const worktreeResults = new Map<string, WorktreeResult>();
+  const protectedBranches: Array<{ name: string; path?: string; reasons: string[] }> = [];
 
   // Run branch detection
   if (targetBranches) {
@@ -83,7 +95,7 @@ export function detectAll(options) {
   }
 
   // Filter out protected branches
-  const branches = [];
+  const branches: BranchResult[] = [];
   for (const [name, result] of branchResults) {
     if (isProtected(name, options.protect || [])) {
       protectedBranches.push({ name, reasons: result.reasons });
@@ -93,7 +105,7 @@ export function detectAll(options) {
   }
 
   // Filter out worktrees with protected branches
-  const worktrees = [];
+  const worktrees: WorktreeResult[] = [];
   for (const [path, result] of worktreeResults) {
     if (isProtected(result.branch, options.protect || [])) {
       protectedBranches.push({ name: result.branch, path, reasons: result.reasons });
@@ -109,7 +121,7 @@ export function detectAll(options) {
  * Add or merge a branch detection result
  * Multiple detection flags use OR logic - store all matching reasons
  */
-function addOrMergeBranchResult(map, result) {
+function addOrMergeBranchResult(map: Map<string, BranchResult>, result: RawBranchResult): void {
   const existing = map.get(result.name);
   if (existing) {
     existing.reasons.push(result.reason);
@@ -128,7 +140,7 @@ function addOrMergeBranchResult(map, result) {
 /**
  * Add or merge a worktree detection result
  */
-function addOrMergeWorktreeResult(map, result) {
+function addOrMergeWorktreeResult(map: Map<string, WorktreeResult>, result: RawWorktreeResult): void {
   const existing = map.get(result.path);
   if (existing) {
     existing.reasons.push(result.reason);

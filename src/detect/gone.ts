@@ -3,15 +3,35 @@
  */
 
 import { getBranchesWithTracking, getWorktrees, getLastCommitDate } from '../git.js';
+import type { MergedOptions } from '../types.js';
+
+interface GoneBranchResult {
+  name: string;
+  reason: 'gone';
+  details: {
+    upstream: string | null;
+    lastCommit: string | null;
+    lastCommitAge: number | null;
+  };
+}
+
+interface GoneWorktreeResult {
+  path: string;
+  branch: string;
+  reason: 'gone';
+  details: {
+    upstream: string | null;
+    lastCommit: string | null;
+    lastCommitAge: number | null;
+  };
+}
 
 /**
  * Detect branches where the upstream remote has been deleted
- * @param {object} options - Detection options
- * @returns {Array<{name: string, reason: string, details: object}>}
  */
-export function detectGoneBranches(options = {}) {
+export function detectGoneBranches(_options: MergedOptions = {} as MergedOptions): GoneBranchResult[] {
   const branches = getBranchesWithTracking();
-  const results = [];
+  const results: GoneBranchResult[] = [];
 
   for (const branch of branches) {
     if (branch.gone) {
@@ -37,17 +57,15 @@ export function detectGoneBranches(options = {}) {
 
 /**
  * Detect worktrees where the branch's upstream remote has been deleted
- * @param {object} options - Detection options
- * @returns {Array<{path: string, branch: string, reason: string, details: object}>}
  */
-export function detectGoneWorktrees(options = {}) {
+export function detectGoneWorktrees(_options: MergedOptions = {} as MergedOptions): GoneWorktreeResult[] {
   const worktrees = getWorktrees();
   const branches = getBranchesWithTracking();
   const goneBranches = new Map(
     branches.filter(b => b.gone).map(b => [b.name, b])
   );
 
-  const results = [];
+  const results: GoneWorktreeResult[] = [];
 
   for (const worktree of worktrees) {
     // Skip bare repos and main worktree (first one)

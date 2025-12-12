@@ -6,8 +6,9 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import type { Config, ParsedOptions, MergedOptions } from './types.js';
 
-const DEFAULT_CONFIG = {
+const DEFAULT_CONFIG: Config = {
   protect: ['main', 'master', 'develop'],
   stale: 30,
   fetch: true,
@@ -17,12 +18,10 @@ const DEFAULT_CONFIG = {
 
 /**
  * Safely parse JSON, returning null on error
- * @param {string} content - JSON string
- * @returns {object|null}
  */
-function safeParseJson(content) {
+function safeParseJson(content: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(content);
+    return JSON.parse(content) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -30,14 +29,12 @@ function safeParseJson(content) {
 
 /**
  * Load config from a file path if it exists
- * @param {string} filePath - Path to config file
- * @returns {object|null}
  */
-function loadConfigFile(filePath) {
+function loadConfigFile(filePath: string): Partial<Config> | null {
   if (!existsSync(filePath)) return null;
   try {
     const content = readFileSync(filePath, 'utf-8');
-    return safeParseJson(content);
+    return safeParseJson(content) as Partial<Config> | null;
   } catch {
     return null;
   }
@@ -45,16 +42,14 @@ function loadConfigFile(filePath) {
 
 /**
  * Load config from package.json lumberjack key
- * @param {string} dir - Directory containing package.json
- * @returns {object|null}
  */
-function loadPackageJsonConfig(dir) {
+function loadPackageJsonConfig(dir: string): Partial<Config> | null {
   const pkgPath = join(dir, 'package.json');
   if (!existsSync(pkgPath)) return null;
   try {
     const content = readFileSync(pkgPath, 'utf-8');
     const pkg = safeParseJson(content);
-    return pkg?.lumberjack || null;
+    return (pkg?.lumberjack as Partial<Config>) || null;
   } catch {
     return null;
   }
@@ -63,20 +58,18 @@ function loadPackageJsonConfig(dir) {
 /**
  * Load configuration from all sources and merge
  * Priority: CLI flags > project .lumberjackrc > home .lumberjackrc > package.json > defaults
- * @param {string} cwd - Current working directory
- * @returns {object} Merged configuration
  */
-export function loadConfig(cwd = process.cwd()) {
+export function loadConfig(cwd: string = process.cwd()): Config {
   // Load from various sources (lowest to highest priority)
   const sources = [
     DEFAULT_CONFIG,
     loadPackageJsonConfig(cwd),
     loadConfigFile(join(homedir(), '.lumberjackrc')),
     loadConfigFile(join(cwd, '.lumberjackrc')),
-  ].filter(Boolean);
+  ].filter((source): source is Config | Partial<Config> => source !== null);
 
   // Merge configs
-  const merged = { ...DEFAULT_CONFIG };
+  const merged: Config = { ...DEFAULT_CONFIG };
 
   for (const source of sources) {
     if (source.protect !== undefined) {
@@ -102,12 +95,9 @@ export function loadConfig(cwd = process.cwd()) {
 /**
  * Merge CLI options with loaded config
  * CLI options take precedence
- * @param {object} cliOptions - Parsed CLI options
- * @param {object} config - Loaded config
- * @returns {object} Final merged options
  */
-export function mergeOptions(cliOptions, config) {
-  const merged = { ...cliOptions };
+export function mergeOptions(cliOptions: ParsedOptions, config: Config): MergedOptions {
+  const merged: MergedOptions = { ...cliOptions };
 
   // Handle protect patterns
   if (cliOptions.noProtect) {
@@ -146,11 +136,8 @@ export function mergeOptions(cliOptions, config) {
 /**
  * Check if a branch name matches any protected pattern
  * Supports simple glob patterns with * wildcard
- * @param {string} branchName - Branch name to check
- * @param {string[]} patterns - Protected patterns
- * @returns {boolean}
  */
-export function isProtected(branchName, patterns) {
+export function isProtected(branchName: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
     if (pattern.includes('*')) {
       // Convert glob pattern to regex

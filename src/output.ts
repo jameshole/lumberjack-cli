@@ -3,8 +3,10 @@
  * Handles terminal output with colors and JSON output
  */
 
+import type { BranchResult, WorktreeResult, Summary, DetectionResult } from './types.js';
+
 // ANSI color codes - minimal implementation
-const colors = {
+const colors: Record<string, string> = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
   dim: '\x1b[2m',
@@ -20,22 +22,16 @@ const noColor = process.env.NO_COLOR !== undefined || !process.stdout.isTTY;
 
 /**
  * Apply color to text
- * @param {string} text - Text to colorize
- * @param {string} color - Color name
- * @returns {string}
  */
-function c(text, color) {
+function c(text: string, color: string): string {
   if (noColor) return text;
   return `${colors[color] || ''}${text}${colors.reset}`;
 }
 
 /**
  * Format a reason for display
- * @param {string} reason - Reason code
- * @param {object} details - Details object
- * @returns {string}
  */
-function formatReason(reason, details) {
+function formatReason(reason: string, details: Record<string, unknown>): string {
   switch (reason) {
     case 'gone':
       return `remote gone${details.upstream ? ` (upstream: ${details.upstream})` : ''}`;
@@ -50,12 +46,14 @@ function formatReason(reason, details) {
   }
 }
 
+interface PrintOptions {
+  dryRun?: boolean;
+}
+
 /**
  * Print a branch result with tree formatting
- * @param {object} branch - Branch result
- * @param {object} options - Output options
  */
-export function printBranch(branch, options = {}) {
+export function printBranch(branch: BranchResult, options: PrintOptions = {}): void {
   const name = options.dryRun
     ? c(branch.name, 'yellow')
     : c(branch.name, 'red');
@@ -68,7 +66,7 @@ export function printBranch(branch, options = {}) {
 
   for (let i = 0; i < reasons.length; i++) {
     const reason = reasons[i];
-    const details = allDetails[reason];
+    const details = allDetails[reason] || {};
     const prefix = i === reasons.length - 1 ? '└─' : '├─';
     console.log(c(`  ${prefix} ${formatReason(reason, details)}`, 'dim'));
   }
@@ -78,10 +76,8 @@ export function printBranch(branch, options = {}) {
 
 /**
  * Print a worktree result with tree formatting
- * @param {object} worktree - Worktree result
- * @param {object} options - Output options
  */
-export function printWorktree(worktree, options = {}) {
+export function printWorktree(worktree: WorktreeResult, options: PrintOptions = {}): void {
   const path = options.dryRun
     ? c(worktree.path, 'yellow')
     : c(worktree.path, 'red');
@@ -95,7 +91,7 @@ export function printWorktree(worktree, options = {}) {
 
   for (let i = 0; i < reasons.length; i++) {
     const reason = reasons[i];
-    const details = allDetails[reason];
+    const details = allDetails[reason] || {};
     const prefix = i === reasons.length - 1 ? '└─' : '├─';
     console.log(c(`  ${prefix} ${formatReason(reason, details)}`, 'dim'));
   }
@@ -106,7 +102,7 @@ export function printWorktree(worktree, options = {}) {
 /**
  * Print dry run header
  */
-export function printDryRunHeader() {
+export function printDryRunHeader(): void {
   console.log();
   console.log(c('DRY RUN - no changes will be made', 'yellow'));
   console.log();
@@ -115,17 +111,15 @@ export function printDryRunHeader() {
 /**
  * Print dry run footer
  */
-export function printDryRunFooter() {
+export function printDryRunFooter(): void {
   console.log(c('Run without --dry-run to delete.', 'dim'));
   console.log();
 }
 
 /**
  * Print branches section header
- * @param {number} count - Number of branches
- * @param {boolean} dryRun - Whether this is a dry run
  */
-export function printBranchesHeader(count, dryRun = false) {
+export function printBranchesHeader(count: number, dryRun: boolean = false): void {
   if (dryRun) {
     console.log(`Would delete ${c(count.toString(), 'bold')} branch${count !== 1 ? 'es' : ''}:`);
   } else {
@@ -136,10 +130,8 @@ export function printBranchesHeader(count, dryRun = false) {
 
 /**
  * Print worktrees section header
- * @param {number} count - Number of worktrees
- * @param {boolean} dryRun - Whether this is a dry run
  */
-export function printWorktreesHeader(count, dryRun = false) {
+export function printWorktreesHeader(count: number, dryRun: boolean = false): void {
   if (dryRun) {
     console.log(`Would remove ${c(count.toString(), 'bold')} worktree${count !== 1 ? 's' : ''}:`);
   } else {
@@ -150,40 +142,36 @@ export function printWorktreesHeader(count, dryRun = false) {
 
 /**
  * Print a success message
- * @param {string} message - Message to print
  */
-export function printSuccess(message) {
+export function printSuccess(message: string): void {
   console.log(c(`✓ ${message}`, 'green'));
 }
 
 /**
  * Print an error message
- * @param {string} message - Message to print
  */
-export function printError(message) {
+export function printError(message: string): void {
   console.error(c(`✗ ${message}`, 'red'));
 }
 
 /**
  * Print a warning message
- * @param {string} message - Message to print
  */
-export function printWarning(message) {
+export function printWarning(message: string): void {
   console.log(c(`! ${message}`, 'yellow'));
 }
 
 /**
  * Print an info message
- * @param {string} message - Message to print
  */
-export function printInfo(message) {
+export function printInfo(message: string): void {
   console.log(c(message, 'dim'));
 }
 
 /**
  * Print nothing found message
  */
-export function printNothingFound() {
+export function printNothingFound(): void {
   console.log();
   console.log(c('No branches or worktrees found matching the criteria.', 'dim'));
   console.log();
@@ -191,9 +179,8 @@ export function printNothingFound() {
 
 /**
  * Print protected branches info (verbose mode)
- * @param {Array} protected - Protected branches
  */
-export function printProtectedInfo(protectedItems) {
+export function printProtectedInfo(protectedItems: Array<{ name: string }>): void {
   if (protectedItems.length === 0) return;
 
   console.log();
@@ -206,10 +193,8 @@ export function printProtectedInfo(protectedItems) {
 
 /**
  * Print deletion result
- * @param {object} result - Deletion result
- * @param {string} type - 'branch' or 'worktree'
  */
-export function printDeletionResult(result, type) {
+export function printDeletionResult(result: { success: boolean; name?: string; path?: string; error?: string }, type: string): void {
   if (result.success) {
     printSuccess(`Deleted ${type}: ${result.name || result.path}`);
   } else {
@@ -219,11 +204,10 @@ export function printDeletionResult(result, type) {
 
 /**
  * Print final summary
- * @param {object} summary - Summary object
  */
-export function printSummary(summary) {
+export function printSummary(summary: Summary): void {
   console.log();
-  const parts = [];
+  const parts: string[] = [];
 
   if (summary.branchesDeleted > 0) {
     parts.push(c(`${summary.branchesDeleted} branch${summary.branchesDeleted !== 1 ? 'es' : ''} deleted`, 'green'));
@@ -246,20 +230,33 @@ export function printSummary(summary) {
 
 /**
  * Output results as JSON
- * @param {object} data - Data to output
  */
-export function outputJson(data) {
+export function outputJson(data: unknown): void {
   console.log(JSON.stringify(data, null, 2));
+}
+
+interface JsonOutput {
+  dryRun: boolean;
+  branches: Array<{
+    name: string;
+    reason: string;
+    reasons: string[];
+    details: Record<string, unknown>;
+  }>;
+  worktrees: Array<{
+    path: string;
+    branch: string;
+    reason: string;
+    reasons: string[];
+    details: Record<string, unknown>;
+  }>;
+  summary: Summary;
 }
 
 /**
  * Build JSON output object
- * @param {object} results - Detection results
- * @param {object} summary - Summary stats
- * @param {boolean} dryRun - Whether this was a dry run
- * @returns {object}
  */
-export function buildJsonOutput(results, summary, dryRun) {
+export function buildJsonOutput(results: DetectionResult, summary: Summary, dryRun: boolean): JsonOutput {
   return {
     dryRun,
     branches: results.branches.map(b => ({

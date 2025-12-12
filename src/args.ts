@@ -3,22 +3,22 @@
  * Parses command line arguments without external dependencies
  */
 
+import type { ParsedOptions } from './types.js';
+
 /**
  * Parse command line arguments into a structured options object
- * @param {string[]} argv - Command line arguments (process.argv.slice(2))
- * @returns {object} Parsed options
  */
-export function parseArgs(argv) {
-  const options = {
+export function parseArgs(argv: string[]): ParsedOptions {
+  const options: ParsedOptions = {
     // Target flags
     branch: false,
     tree: false,
 
     // Detection flags
     gone: false,
-    merged: null,      // null = not set, true = use default, string = specific branch
-    squashed: null,    // null = not set, true = use default, string = specific branch
-    stale: null,       // null = not set, true = use default, number = specific days
+    merged: null,
+    squashed: null,
+    stale: null,
     all: false,
 
     // Global options
@@ -126,10 +126,8 @@ export function parseArgs(argv) {
 
 /**
  * Check if any detection flags are set
- * @param {object} options - Parsed options
- * @returns {boolean}
  */
-export function hasDetectionFlags(options) {
+export function hasDetectionFlags(options: ParsedOptions): boolean {
   return options.gone ||
          options.merged !== null ||
          options.squashed !== null ||
@@ -138,10 +136,8 @@ export function hasDetectionFlags(options) {
 
 /**
  * Parse a defaultCommand string into argv array
- * @param {string} command - Command string like "--branch --gone"
- * @returns {string[]}
  */
-export function parseDefaultCommand(command) {
+export function parseDefaultCommand(command: string | null): string[] {
   if (!command) return [];
   // Simple split on whitespace, handles basic cases
   return command.trim().split(/\s+/).filter(Boolean);
@@ -150,7 +146,7 @@ export function parseDefaultCommand(command) {
 /**
  * Print help message
  */
-export function printHelp() {
+export function printHelp(): void {
   console.log(`
 Usage: chop [options]
 
@@ -187,6 +183,6 @@ Examples:
 /**
  * Print version
  */
-export function printVersion() {
-  console.log('lumberjack v0.0.3');
+export function printVersion(): void {
+  console.log('lumberjack v0.0.4');
 }

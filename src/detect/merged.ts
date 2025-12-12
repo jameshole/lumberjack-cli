@@ -3,21 +3,40 @@
  */
 
 import { getMergedBranches, getWorktrees, getLastCommitDate, getCurrentBranch } from '../git.js';
+import type { MergedOptions } from '../types.js';
+
+interface MergedBranchResult {
+  name: string;
+  reason: 'merged';
+  details: {
+    mergedInto: string;
+    lastCommit: string | null;
+    lastCommitAge: number | null;
+  };
+}
+
+interface MergedWorktreeResult {
+  path: string;
+  branch: string;
+  reason: 'merged';
+  details: {
+    mergedInto: string;
+    lastCommit: string | null;
+    lastCommitAge: number | null;
+  };
+}
 
 /**
  * Detect branches that have been merged into a base branch
- * @param {string|null} baseBranch - Branch to check against (null = current branch)
- * @param {object} options - Detection options
- * @returns {Array<{name: string, reason: string, details: object}>}
  */
-export function detectMergedBranches(baseBranch = null, options = {}) {
+export function detectMergedBranches(baseBranch: string | null = null, _options: MergedOptions = {} as MergedOptions): MergedBranchResult[] {
   const base = baseBranch || getCurrentBranch();
   if (!base) {
     return [];
   }
 
   const mergedBranches = getMergedBranches(base);
-  const results = [];
+  const results: MergedBranchResult[] = [];
 
   for (const name of mergedBranches) {
     const lastCommit = getLastCommitDate(name);
@@ -41,11 +60,8 @@ export function detectMergedBranches(baseBranch = null, options = {}) {
 
 /**
  * Detect worktrees whose branches have been merged into a base branch
- * @param {string|null} baseBranch - Branch to check against (null = current branch)
- * @param {object} options - Detection options
- * @returns {Array<{path: string, branch: string, reason: string, details: object}>}
  */
-export function detectMergedWorktrees(baseBranch = null, options = {}) {
+export function detectMergedWorktrees(baseBranch: string | null = null, _options: MergedOptions = {} as MergedOptions): MergedWorktreeResult[] {
   const base = baseBranch || getCurrentBranch();
   if (!base) {
     return [];
@@ -53,7 +69,7 @@ export function detectMergedWorktrees(baseBranch = null, options = {}) {
 
   const mergedBranches = new Set(getMergedBranches(base));
   const worktrees = getWorktrees();
-  const results = [];
+  const results: MergedWorktreeResult[] = [];
 
   for (const worktree of worktrees) {
     if (worktree.bare || !worktree.branch) continue;

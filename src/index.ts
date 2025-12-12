@@ -15,7 +15,6 @@ import {
   printWorktree,
   printNothingFound,
   printProtectedInfo,
-  printDeletionResult,
   printSummary,
   printError,
   printInfo,
@@ -30,12 +29,12 @@ import {
   formatWorktreeLabel,
   confirm,
 } from './prompts.js';
+import type { MergedOptions, BranchResult, WorktreeResult, DeletionSummary } from './types.js';
 
 /**
  * Main entry point
- * @param {string[]} argv - Command line arguments
  */
-export async function main(argv) {
+export async function main(argv: string[]): Promise<void> {
   // Parse CLI arguments
   let options = parseArgs(argv);
 
@@ -66,15 +65,15 @@ export async function main(argv) {
   }
 
   // Merge CLI options with config
-  options = mergeOptions(options, config);
+  let mergedOptions = mergeOptions(options, config);
 
   // Determine mode: interactive or command-line
-  const isInteractive = !hasDetectionFlags(options);
+  const isInteractive = !hasDetectionFlags(mergedOptions);
 
   if (isInteractive) {
-    await runInteractive(options);
+    await runInteractive(mergedOptions);
   } else {
-    await runCommandLine(options);
+    await runCommandLine(mergedOptions);
   }
 
   // Ensure stdin is paused so process can exit
@@ -83,9 +82,8 @@ export async function main(argv) {
 
 /**
  * Run in interactive mode
- * @param {object} options - Initial options
  */
-async function runInteractive(options) {
+async function runInteractive(options: MergedOptions): Promise<void> {
   // Get user preferences
   options = await runInteractiveMode(options);
 
@@ -112,7 +110,7 @@ async function runInteractive(options) {
   }
 
   // Show and select branches
-  let selectedBranches = [];
+  let selectedBranches: BranchResult[] = [];
   if (results.branches.length > 0) {
     console.log();
     printBranchesHeader(results.branches.length);
@@ -128,7 +126,7 @@ async function runInteractive(options) {
   }
 
   // Show and select worktrees
-  let selectedWorktrees = [];
+  let selectedWorktrees: WorktreeResult[] = [];
   if (results.worktrees.length > 0) {
     console.log();
     printWorktreesHeader(results.worktrees.length);
@@ -167,9 +165,8 @@ async function runInteractive(options) {
 
 /**
  * Run in command-line mode
- * @param {object} options - Parsed options
  */
-async function runCommandLine(options) {
+async function runCommandLine(options: MergedOptions): Promise<void> {
   // Fetch if needed
   if (!options.noFetch) {
     if (!options.json) {
@@ -304,13 +301,13 @@ async function runCommandLine(options) {
 
 /**
  * Perform actual deletions
- * @param {Array} branches - Branches to delete
- * @param {Array} worktrees - Worktrees to remove
- * @param {boolean} silent - Suppress output
- * @returns {object} Summary of operations
  */
-async function performDeletions(branches, worktrees, silent = false) {
-  const summary = {
+async function performDeletions(
+  branches: BranchResult[],
+  worktrees: WorktreeResult[],
+  silent: boolean = false
+): Promise<DeletionSummary> {
+  const summary: DeletionSummary = {
     branchesDeleted: 0,
     worktreesDeleted: 0,
     failed: 0,
