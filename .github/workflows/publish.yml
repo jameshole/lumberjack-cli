@@ -43,7 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.version.outputs.changed == 'true'
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm ci
