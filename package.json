@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "bash tests/run.sh",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
