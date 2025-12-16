@@ -27,6 +27,7 @@ export function parseArgs(argv: string[]): ParsedOptions {
     protect: [],
     noProtect: false,
     noFetch: false,
+    keepBranch: false,
     json: false,
     verbose: false,
     help: false,
@@ -89,6 +90,9 @@ export function parseArgs(argv: string[]): ParsedOptions {
         break;
       case '--no-fetch':
         options.noFetch = true;
+        break;
+      case '--keep-branch':
+        options.keepBranch = true;
         break;
       case '--json':
         options.json = true;
@@ -167,6 +171,7 @@ Global Options:
   -p, --protect <list>   Comma-separated patterns to protect
   --no-protect           Disable default protected branches
   --no-fetch             Skip git fetch --prune
+  --keep-branch          Don't delete branch when removing worktree
   --json                 Output as JSON
   -v, --verbose          Show detailed information
   -h, --help             Show help
@@ -184,5 +189,5 @@ Examples:
  * Print version
  */
 export function printVersion(): void {
-  console.log('lumberjack v0.0.8');
+  console.log('lumberjack v0.1.0');
 }

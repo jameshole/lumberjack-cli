@@ -111,6 +111,7 @@ chop --all
 | `--protect <patterns>` | `-p` | Comma-separated branch patterns to never delete (in addition to defaults). |
 | `--no-protect` | | Disable default protected branches. Not recommended. |
 | `--no-fetch` | | Skip the `git fetch --prune` step. Useful if you've just fetched. |
+| `--keep-branch` | | When removing worktrees, don't delete the associated branch. |
 | `--json` | | Output results as JSON (useful for scripting). |
 | `--verbose` | `-v` | Show detailed information about why each item was flagged. |
 | `--help` | `-h` | Show help. |
@@ -352,10 +353,15 @@ chop --branch --merged
    - If `--squashed=<branch>` is provided, uses that branch
    - Else if `mergeBase` is set in config, uses that
    - Else uses the current branch
-2. For each branch, runs `git diff <base>...<branch> --quiet`
-3. If the diff is empty, the branch's changes are already in the base (via squash, rebase, or regular merge)
+2. For each branch, simulates a merge using `git merge-tree --write-tree`
+3. Compares the resulting tree hash with the base branch's current tree
+4. If the trees are identical, the branch adds no new changes - it's already in base
 
-This is more expensive than `--merged` (runs a diff per branch) but works for any merge strategy.
+This approach correctly detects squash-merged branches even when:
+- The branch had multiple commits that were squashed into one
+- The base branch has moved forward since the squash merge
+
+**Note:** Requires Git 2.38+ for the `merge-tree --write-tree` feature.
 
 ```bash
 # Check if branch changes are already in main
@@ -399,7 +405,7 @@ chop --branch --stale
 ## Requirements
 
 - Node.js 18+
-- Git 2.20+
+- Git 2.20+ (Git 2.38+ required for `--squashed` detection)
 
 ---
 

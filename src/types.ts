@@ -20,6 +20,7 @@ export interface ParsedOptions {
   protect: string[];
   noProtect: boolean;
   noFetch: boolean;
+  keepBranch: boolean;
   json: boolean;
   verbose: boolean;
   help: boolean;

@@ -121,7 +121,7 @@ async function runCommandLine(options: MergedOptions): Promise<void> {
     const deletionSummary = await performDeletions(
       results.branches,
       results.worktrees,
-      true // silent
+      { silent: true, keepBranch: options.keepBranch }
     );
 
     summary.branchesDeleted = deletionSummary.branchesDeleted;
@@ -205,7 +205,9 @@ async function runCommandLine(options: MergedOptions): Promise<void> {
   }
 
   // Perform deletions
-  const deletionSummary = await performDeletions(results.branches, results.worktrees);
+  const deletionSummary = await performDeletions(results.branches, results.worktrees, {
+    keepBranch: options.keepBranch,
+  });
   printSummary(deletionSummary);
 }
 
@@ -215,8 +217,9 @@ async function runCommandLine(options: MergedOptions): Promise<void> {
 async function performDeletions(
   branches: BranchResult[],
   worktrees: WorktreeResult[],
-  silent: boolean = false
+  options: { silent?: boolean; keepBranch?: boolean } = {}
 ): Promise<DeletionSummary> {
+  const { silent = false, keepBranch = false } = options;
   const summary: DeletionSummary = {
     branchesDeleted: 0,
     worktreesDeleted: 0,
@@ -265,10 +268,12 @@ async function performDeletions(
         printSuccess(`Removed worktree: ${worktree.path}`);
       }
 
-      // Also delete the associated branch if it still exists
-      const branchResult = deleteBranch(worktree.branch, true);
-      if (branchResult.success && !silent) {
-        printSuccess(`Deleted branch: ${worktree.branch}`);
+      // Also delete the associated branch if it still exists (unless --keep-branch)
+      if (!keepBranch) {
+        const branchResult = deleteBranch(worktree.branch, true);
+        if (branchResult.success && !silent) {
+          printSuccess(`Deleted branch: ${worktree.branch}`);
+        }
       }
     } else {
       summary.failed++;

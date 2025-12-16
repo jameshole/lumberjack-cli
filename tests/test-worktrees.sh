@@ -83,6 +83,26 @@ test_worktree_removal_with_force() {
 run_test "removes worktree and branch with --force" test_worktree_removal_with_force
 
 # ----------------------------------------------------------------------------
+test_keep_branch_flag() {
+  create_repo
+  create_bare_remote origin
+
+  create_branch "wt-keep" "origin"
+  local wt_path="$TEST_TEMP/worktrees/wt-keep"
+  create_worktree "wt-keep" "$wt_path"
+
+  delete_remote_branch origin wt-keep
+
+  output=$(run_chop --tree --gone --force --keep-branch)
+
+  assert_worktree_removed "$wt_path" "Worktree should be removed"
+  # Branch should NOT be deleted with --keep-branch
+  assert_branch_exists "wt-keep" "Branch should be kept with --keep-branch"
+}
+
+run_test "--keep-branch preserves branch when removing worktree" test_keep_branch_flag
+
+# ----------------------------------------------------------------------------
 test_tree_only_flag() {
   create_repo
   create_bare_remote origin
