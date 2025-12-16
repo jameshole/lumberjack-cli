@@ -115,15 +115,37 @@ export function getMergedBranches(baseBranch: string): string[] {
 
 /**
  * Check if a branch's changes are in the base branch (for squash detection)
+ * Uses merge-tree to simulate merging the branch into base.
+ * If the result is identical to base's current tree, the branch is already merged.
+ * Requires Git 2.38+ for merge-tree --write-tree.
  */
 export function isBranchSquashed(branch: string, baseBranch: string): boolean {
-  // git diff base...branch shows changes in branch not in base
-  // If there are no changes, the branch is effectively merged/squashed
-  const result = spawnSync('git', ['diff', '--quiet', `${baseBranch}...${branch}`], {
+  // Simulate merge using git merge-tree --write-tree (Git 2.38+)
+  // This computes what tree a merge would produce without touching the working directory
+  const mergeResult = spawnSync('git', ['merge-tree', '--write-tree', baseBranch, branch], {
     encoding: 'utf-8',
   });
-  // Exit code 0 = no diff = changes are in base
-  return result.status === 0;
+
+  if (mergeResult.status !== 0) {
+    // Merge would have conflicts or command failed - can't determine, assume not squashed
+    return false;
+  }
+
+  const mergeTreeHash = mergeResult.stdout.trim();
+
+  // Get the base branch's current tree hash
+  const baseTreeResult = spawnSync('git', ['rev-parse', `${baseBranch}^{tree}`], {
+    encoding: 'utf-8',
+  });
+
+  if (baseTreeResult.status !== 0) {
+    return false;
+  }
+
+  const baseTreeHash = baseTreeResult.stdout.trim();
+
+  // If merging the branch produces the same tree as base, the branch is already in base
+  return mergeTreeHash === baseTreeHash;
 }
 
 /**
