@@ -189,5 +189,5 @@ Examples:
  * Print version
  */
 export function printVersion(): void {
-  console.log('lumberjack v0.1.0');
+  console.log('lumberjack v0.1.1');
 }

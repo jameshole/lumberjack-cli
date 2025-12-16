@@ -213,6 +213,7 @@ async function runCommandLine(options: MergedOptions): Promise<void> {
 
 /**
  * Perform actual deletions
+ * Worktrees are processed first since their branches can't be deleted while checked out
  */
 async function performDeletions(
   branches: BranchResult[],
@@ -227,8 +228,50 @@ async function performDeletions(
     skipped: 0,
   };
 
-  // Delete branches
+  // Track branches deleted as part of worktree removal
+  const deletedBranches = new Set<string>();
+
+  // Remove worktrees first (branches can't be deleted while checked out in a worktree)
+  for (const worktree of worktrees) {
+    let result = removeWorktree(worktree.path, false);
+
+    if (!result.success) {
+      // Try force removal
+      result = removeWorktree(worktree.path, true);
+    }
+
+    if (result.success) {
+      summary.worktreesDeleted++;
+      if (!silent) {
+        printSuccess(`Removed worktree: ${worktree.path}`);
+      }
+
+      // Also delete the associated branch if it still exists (unless --keep-branch)
+      if (!keepBranch) {
+        const branchResult = deleteBranch(worktree.branch, true);
+        if (branchResult.success) {
+          deletedBranches.add(worktree.branch);
+          if (!silent) {
+            printSuccess(`Deleted branch: ${worktree.branch}`);
+          }
+        }
+      }
+    } else {
+      summary.failed++;
+      if (!silent) {
+        printError(`Failed to remove ${worktree.path}: ${result.error}`);
+      }
+    }
+  }
+
+  // Delete branches (skip any already deleted with worktrees)
   for (const branch of branches) {
+    // Skip if already deleted as part of worktree removal
+    if (deletedBranches.has(branch.name)) {
+      summary.branchesDeleted++;
+      continue;
+    }
+
     let result = deleteBranch(branch.name, false);
 
     // If safe delete fails, try force delete
@@ -248,37 +291,6 @@ async function performDeletions(
       summary.failed++;
       if (!silent) {
         printError(`Failed to delete ${branch.name}: ${result.error}`);
-      }
-    }
-  }
-
-  // Remove worktrees (and their branches)
-  for (const worktree of worktrees) {
-    // First remove the worktree
-    let result = removeWorktree(worktree.path, false);
-
-    if (!result.success) {
-      // Try force removal
-      result = removeWorktree(worktree.path, true);
-    }
-
-    if (result.success) {
-      summary.worktreesDeleted++;
-      if (!silent) {
-        printSuccess(`Removed worktree: ${worktree.path}`);
-      }
-
-      // Also delete the associated branch if it still exists (unless --keep-branch)
-      if (!keepBranch) {
-        const branchResult = deleteBranch(worktree.branch, true);
-        if (branchResult.success && !silent) {
-          printSuccess(`Deleted branch: ${worktree.branch}`);
-        }
-      }
-    } else {
-      summary.failed++;
-      if (!silent) {
-        printError(`Failed to remove ${worktree.path}: ${result.error}`);
       }
     }
   }
